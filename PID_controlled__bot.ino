@@ -1,12 +1,13 @@
-#define TCP false
+#define TCP true
 #include "utils.h"
 #include <PID_v1.h>
-#if TCP
-#include "ArduinoTcpHardware.h"
-#else
-#include "ArduinoHardware.h"
-#endif    
+//#if TCP
+//#include "ArduinoTcpHardware.h"
+//#else
+//#include "ArduinoHardware.h"
+//#endif    
 
+#include "ArduinoTcpHardware.h"
 
 #include <geometry_msgs/Twist.h>
 #include <ros.h>
@@ -22,11 +23,17 @@
 const char *ssid = "Galaxy M31A78E";
 const char *password = "rutuhrishi4565";
 // Set the rosserial socket server IP address
-IPAddress server(192,168,111,186);
+IPAddress server(192,168,238,26);
 //Set the rosserial socket server port
 const uint16_t serverPort = 11411;
 
 #endif
+
+void velCallback(const geometry_msgs::Twist &vel)
+{
+  x = vel.linear.x;
+  z = vel.angular.z;
+}
 
 //initializing handle
 
@@ -35,6 +42,7 @@ ros::NodeHandle nh;
 geometry_msgs::TransformStamped t;
 nav_msgs::Odometry odom_msg;
 ros::Publisher odom_pub("odom", &odom_msg);
+ros::Subscriber<geometry_msgs::Twist> sub("cmd_vel", velCallback);
 tf::TransformBroadcaster broadcaster;
 
 //tf variables to be
@@ -85,7 +93,7 @@ void setup() {
     Serial.println(WiFi.localIP());
 
     // Set the connection to rosserial socket server
-//    nh.getHardware() -> setConnection(server, serverPort);
+    nh.getHardware() -> setConnection(server, serverPort);
 
     //Another way to get IP
     Serial.print("IP = ");
@@ -111,6 +119,9 @@ void setup() {
 
 void loop() {
     nh.spinOnce();
+
+    SetRPS_L = (x + z*wheel_dist/2)/(pi * DIAMETER);
+    SetRPS_R = (x - z*wheel_dist/2)/(pi * DIAMETER);
 
     input_R = rps_R;
     input_L = rps_L;

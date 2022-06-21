@@ -1,4 +1,7 @@
-//#include "esp_system.h"
+#include <ArduinoTcpHardware.h>
+#include <ros.h>
+#include <geometry_msgs/Twist.h>
+
 #define A1 26 // Left
 #define B_1 27
 #define P1 25
@@ -50,14 +53,11 @@ double Velocity_bot = 0;
 double x_bot = 0;
 double y_bot = 0;
 double phi = 0;
+double x, z;
 
 void Differential_drive();
 
 
-void velCallback(const geometry_msgs::Twist &vel)
-{
-  SetRPS_R
-}
 
 void IRAM_ATTR onTimer() {   // 100 ms timer
 
