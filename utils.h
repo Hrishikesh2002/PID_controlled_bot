@@ -53,7 +53,7 @@ double Velocity_bot = 0;
 double x_bot = 0;
 double y_bot = 0;
 double phi = 0;
-double x, z;
+double x=0, z=0;
 
 void Differential_drive();
 
@@ -65,8 +65,8 @@ void IRAM_ATTR onTimer() {   // 100 ms timer
   Rcounter_cur = counter_R;    
   count_diff_R = Rcounter_cur - Rcounter_prev;
   R_revs = count_diff_R/counts_per_rev;
-  rps_R = R_revs*100;
-  Omega_R = rps_R * pi * DIAMETER;
+  rps_R = R_revs*10;
+  Omega_R = rps_R * pi * 2;
   R_dist = R_revs * pi * DIAMETER;
   Rcounter_prev = Rcounter_cur;
   
@@ -74,8 +74,8 @@ void IRAM_ATTR onTimer() {   // 100 ms timer
   Lcounter_cur = counter_L;
   count_diff_L = Lcounter_cur - Lcounter_prev;
   L_revs = count_diff_L/counts_per_rev;
-  rps_L = L_revs*100;
-  Omega_L = rps_L * pi * DIAMETER;
+  rps_L = L_revs*10;
+  Omega_L = rps_L * pi * 2;
   L_dist = L_revs * pi * DIAMETER;
   Lcounter_prev = Lcounter_cur;
 
@@ -88,7 +88,7 @@ void IRAM_ATTR onTimer() {   // 100 ms timer
 }
 
 void updateCounter_R(){
-   if(digitalRead(outputB_R)==LOW)
+   if(digitalRead(outputA_R)==HIGH)
   {
     counter_R++;
   }
@@ -101,7 +101,7 @@ void updateCounter_R(){
 }
 
 void updateCounter_L(){
-   if(digitalRead(outputB_L)==LOW)
+   if(digitalRead(outputA_L)==LOW)
   {
     counter_L++;
   }
@@ -124,6 +124,8 @@ void SetPins() {
 
   pinMode(outputA_R, INPUT);
   pinMode(outputB_R, INPUT);
+  pinMode(outputA_L, INPUT);
+  pinMode(outputB_L, INPUT); 
 }
 
 void SetTimer() {
@@ -132,51 +134,86 @@ void SetTimer() {
   timerAlarmWrite(timer, 100000, true);
   timerAlarmEnable(timer);
 
-  attachInterrupt(digitalPinToInterrupt(outputA_R), updateCounter_R, RISING);
-  attachInterrupt(digitalPinToInterrupt(outputA_L), updateCounter_L, RISING);
+  attachInterrupt(digitalPinToInterrupt(outputB_R), updateCounter_R, RISING);
+  attachInterrupt(digitalPinToInterrupt(outputB_L), updateCounter_L, RISING);
 }
 
+double pwm_L=0;
+double pwm_R=0;
 
-void driveMotor(int Location, double speed, int direction) {
-  
+void driveMotor(int Location, double speed_curr) {
+
+// speed_curr = map(speed_curr, -100, +100, -255, +255);
+
+if(speed_curr>=0)
+{
   if(Location){
-    double pwm_R = map(speed, 0, 100, 0, 255);
-    digitalWrite(A2, !direction);
-    digitalWrite(B2, direction);
+    pwm_R = speed_curr;
+    digitalWrite(A2, 1);
+    digitalWrite(B2, 0);
     analogWrite(P2,pwm_R);
   }
 
 
   else{
-    double pwm_L = map(speed, 0, 100, 0, 255);
-    digitalWrite(A1, !direction);
-    digitalWrite(B_1, direction);
+    pwm_L = speed_curr;
+    digitalWrite(A1, 1);
+    digitalWrite(B_1,0);
     analogWrite(P1, pwm_L);
   }
 }
 
+if(speed_curr<0)
+{
+    if(Location){
+    pwm_R = speed_curr;
+    digitalWrite(A2, 0);
+    digitalWrite(B2, 1);
+    analogWrite(P2,(-1)*pwm_R);
+  }
+
+
+  else{
+    pwm_L = speed_curr;
+    digitalWrite(A1, 0);
+    digitalWrite(B_1,1);
+    analogWrite(P1, (-1)*pwm_L);
+  }
+}
+
+
+}
+
 void Differential_drive()
 {
-  revs_total_L = counter_L/counts_per_rev;
-  revs_total_R = counter_R/counts_per_rev;
+//  revs_total_L = counter_L/counts_per_rev;
+//  revs_total_R = counter_R/counts_per_rev;
+//
+//  dist_left = revs_total_L * pi * DIAMETER;
+//  dist_right = revs_total_R * pi * DIAMETER;
+//
+//  distance_travelled = (dist_left + dist_right)/2;
 
-  dist_left = revs_total_L * pi * DIAMETER;
-  dist_right = revs_total_R * pi * DIAMETER;
-
-  distance_travelled = (dist_left + dist_right)/2;
-
-  Omega_bot = DIAMETER * (Omega_R - Omega_L)/(4 * wheel_dist );
-  Velocity_bot = DIAMETER * (Omega_R + Omega_L)/(4 * wheel_dist );
+  Omega_bot = DIAMETER * (Omega_R - Omega_L)/(2 * wheel_dist );
+  Velocity_bot = DIAMETER * (Omega_R + Omega_L)/(4);
 
   phi = ((R_dist - L_dist)/wheel_dist);
 
-  double avg_dist = (L_dist + R_dist)/2;
+  double avg_dist = (R_dist + L_dist)/2;
 
   x_bot = x_bot + avg_dist * cos(Theta_bot + phi/2);
   y_bot = y_bot + avg_dist * sin(Theta_bot + phi/2);
 
   Theta_bot += phi;
 
-  Theta_bot = fmod(Theta_bot, 2*PI);
+  if(Theta_bot >= 2*pi)
+  {
+    Theta_bot -= 2*pi;
+  }
+
+  if(Theta_bot <= (-1)*2*pi)
+  {
+    Theta_bot += 2*pi;
+  }
 
 }

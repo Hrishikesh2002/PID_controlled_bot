@@ -51,22 +51,24 @@ char odom[] = "/odom";
 
 double SetRPS_R =5;
 double SetRPS_L =5;
-double Kp = 1.2; double Ki = 9.5 ; double Kd = 0;
+double Kp = 50; double Ki = 300 ; double Kd = 0;
 // The values of Kp, Ki, Kd for rpm are 1,1,0 (for 100 ms timer)
-double ctrl_speed = 0;
+// 1.2, 9.5, 0 for rps 100ms timer
 
 double input_L = 0;
 double input_R = 0;
 double output_L = 0;
 double output_R = 0;
 
-PID PID_R(&input_R, &output_R, &SetRPS_R, Kp, Ki, Kd, DIRECT);
-PID PID_L(&input_L, &output_L, &SetRPS_L, Kp, Ki, Kd, DIRECT);
+PID PID_R(&rps_R, &output_R, &SetRPS_R, Kp, Ki, Kd, DIRECT);
+PID PID_L(&rps_L, &output_L, &SetRPS_L, Kp, Ki, Kd, DIRECT);
 
 
 void setup() {
   PID_R.SetMode(AUTOMATIC);
   PID_L.SetMode(AUTOMATIC);
+  PID_R.SetOutputLimits(-255, 255);
+  PID_L.SetOutputLimits(-255, 255);
   
   SetPins();
 
@@ -117,28 +119,27 @@ void setup() {
   // Serial.begin(9600);
 }
 
+double currentMillis=0, previousMillis=0;
+
 void loop() {
     nh.spinOnce();
 
-    SetRPS_L = (x + z*wheel_dist/2)/(pi * DIAMETER);
-    SetRPS_R = (x - z*wheel_dist/2)/(pi * DIAMETER);
-
-    input_R = rps_R;
-    input_L = rps_L;
+    SetRPS_L = (x - z*wheel_dist/2)/(pi * DIAMETER);
+    SetRPS_R = (x + z*wheel_dist/2)/(pi * DIAMETER);
 
     PID_R.Compute();
     PID_L.Compute();
 
-    driveMotor(LEFT, output_L, ClkWise);
-    driveMotor(RIGHT, output_R, ClkWise);
-
-   
-
-      Serial.println(distance_travelled);   
+    driveMotor(LEFT, output_L);
+    driveMotor(RIGHT, output_R);
+//
+//      Serial.println(distance_travelled);   
 
 
 // *** broadcast odom->base_link transform with tf ***
-  
+   currentMillis = millis();
+    if (currentMillis - previousMillis >= 10)
+    {
     geometry_msgs::TransformStamped t;
 
     t.header.stamp = nh.now();
@@ -170,5 +171,9 @@ void loop() {
     odom_msg.twist.twist.angular.z = Omega_bot;
 
     odom_pub.publish(&odom_msg);
+
+    Serial.println(counter_L);
+
+    }
 
 }
