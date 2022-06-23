@@ -172,7 +172,6 @@ void loop() {
 
     odom_pub.publish(&odom_msg);
 
-    Serial.println(counter_L);
 
     }
 
